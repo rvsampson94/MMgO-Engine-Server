@@ -2,13 +2,15 @@ package engine
 
 // InputEvent is a container for input information to be passed to the players RPC
 type InputEvent struct {
-	position Vector
+	position  Vector
+	direction Vector
 }
 
 // NewInputEvent creates a new input event
-func NewInputEvent(position Vector) InputEvent {
+func NewInputEvent(position Vector, direction Vector) InputEvent {
 	return InputEvent{
-		position: position,
+		position:  position,
+		direction: direction,
 	}
 }
 
@@ -16,7 +18,7 @@ func NewInputEvent(position Vector) InputEvent {
 type RemotePlayerControler struct {
 	parent    *Entity
 	speed     float64
-	direction Vector
+	Direction Vector
 	events    []InputEvent //TODO make a queue implementation
 }
 
@@ -25,7 +27,7 @@ func NewRemotePlayerController(parent *Entity, speed float64) *RemotePlayerContr
 	return &RemotePlayerControler{
 		parent:    parent,
 		speed:     speed,
-		direction: NewVector(0, 0),
+		Direction: NewVector(0, 0),
 	}
 }
 
@@ -41,6 +43,9 @@ func (rc *RemotePlayerControler) OnUpdate(delta float64) error {
 		//TODO validate movement
 		player.Position.X = event.position.X
 		player.Position.Y = event.position.Y
+		rc.Direction.X = event.direction.X
+		rc.Direction.Y = event.direction.Y
+		player.Update = true
 	}
 	rc.events = nil
 	return nil

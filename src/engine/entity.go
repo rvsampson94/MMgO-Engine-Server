@@ -9,12 +9,14 @@ import (
 type Entity struct {
 	Position   Vector
 	Components []Component
+	Update     bool
 }
 
 // NewEntity creates a new entity at position (x, y)
 func NewEntity(x float64, y float64) *Entity {
 	return &Entity{
 		Position: NewVector(x, y),
+		Update:   true,
 	}
 }
 

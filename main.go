@@ -49,9 +49,13 @@ func main() {
 
 		// Send game state updates to clients
 		for identifier, ent := range g.entities {
-			for _, client := range g.clients {
-				data := []byte(fmt.Sprintf("%s;1;%f,%f", identifier, ent.Position.X, ent.Position.Y))
-				conn.WriteToUDP(data, client.addr)
+			if ent.Update {
+				for _, client := range g.clients {
+					controller := ent.GetComponent(&engine.RemotePlayerControler{}).(*engine.RemotePlayerControler)
+					data := []byte(fmt.Sprintf("%s;1;%f,%f,%f,%f", identifier, ent.Position.X, ent.Position.Y, controller.Direction.X, controller.Direction.Y))
+					conn.WriteToUDP(data, client.addr)
+				}
+				ent.Update = false
 			}
 		}
 
@@ -88,20 +92,35 @@ func handleUDP(n int, addr *net.UDPAddr, buffer []byte) {
 
 		data := []byte(fmt.Sprintf("0;0;%s", clientID))
 		conn.WriteToUDP(data, addr)
+		sendAll(addr)
 	case "1": // player input
 		params := strings.Split(data, ",")
-		// dirX, _ := strconv.ParseFloat(params[0], 64)
-		// dirY, _ := strconv.ParseFloat(params[1], 64)
-		posX, err := strconv.ParseFloat(params[2], 64)
+		posX, err := strconv.ParseFloat(params[0], 64)
 		if err != nil {
 			fmt.Println(err)
 		}
-		posY, err := strconv.ParseFloat(params[3], 64)
+		posY, err := strconv.ParseFloat(params[1], 64)
 		if err != nil {
 			fmt.Println(err)
 		}
-		event := engine.NewInputEvent(engine.NewVector(posX, posY))
+		dirX, _ := strconv.ParseFloat(params[2], 64)
+		dirY, _ := strconv.ParseFloat(params[3], 64)
+		event := engine.NewInputEvent(engine.NewVector(posX, posY), engine.NewVector(dirX, dirY))
 		g.entities[string(identifier)].GetComponent(&engine.RemotePlayerControler{}).(*engine.RemotePlayerControler).AddEvent(event)
 	}
 
+}
+
+func sendAll(addr *net.UDPAddr) {
+	data := "0;3;"
+	i := 0
+	for key, ent := range g.entities {
+		controller := ent.GetComponent(&engine.RemotePlayerControler{}).(*engine.RemotePlayerControler)
+		playerData := fmt.Sprintf("%s:%f:%f:%f:%f", key, ent.Position.X, ent.Position.Y, controller.Direction.X, controller.Direction.Y)
+		data += playerData
+		if i != len(g.entities)-1 {
+			data += ","
+		}
+	}
+	conn.WriteToUDP([]byte(data), addr)
 }
